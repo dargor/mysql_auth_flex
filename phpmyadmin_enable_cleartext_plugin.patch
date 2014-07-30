@@ -1,0 +1,11 @@
+--- /usr/share/phpmyadmin/libraries/dbi/mysqli.dbi.lib.php~	2012-08-12 15:38:18.000000000 +0200
++++ /usr/share/phpmyadmin/libraries/dbi/mysqli.dbi.lib.php	2014-07-29 21:11:39.588695829 +0200
+@@ -107,6 +107,8 @@
+         $client_flags |= MYSQLI_CLIENT_SSL;
+     }
+ 
++    mysqli_options($link, MYSQLI_READ_DEFAULT_FILE, "/etc/mysql/my_enable_cleartext_plugin.cnf");
++    
+     if (!$server) {
+         $return_value = @mysqli_real_connect($link, $GLOBALS['cfg']['Server']['host'], $user, $password, false, $server_port, $server_socket, $client_flags);
+         // Retry with empty password if we're allowed to

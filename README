@@ -1,0 +1,25 @@
+pmake debug=2
+
+cat > my_enable_cleartext_plugin.cnf <<EOF
+[mysql]
+enable-cleartext-plugin
+
+[client]
+enable-cleartext-plugin
+EOF
+
+cat >> /etc/apparmor.d/local/usr.sbin.mysqld <<EOF
+# allow auth_flex to use PAM
+#include <abstractions/authentication>
+EOF
+
+cat > /etc/pam.d/mysql <<EOF
+#%PAM-1.0
+
+#@include common-auth
+#@include common-account
+#@include common-session
+
+auth    required        pam_flex_yubikey.so
+account required        pam_flex_yubikey.so
+EOF
