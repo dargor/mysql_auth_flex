@@ -73,7 +73,7 @@ static void *_find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *
   void *addr_scramble = NULL;
   int i;
 
-  for (i = 40; i < 60; ++i)
+  for (i = 30; i < 50; ++i)
     {
       void *addr = ((void *)&vio[1]) + sizeof(*info) + 4 * i;
       DEBUG syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : compare at %p (* -> %p) (diff %ld)",
@@ -91,6 +91,7 @@ static void *_find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *
 
 	  if (strspn(info->host_or_ip, "0123456789.") == strlen(info->host_or_ip))
 	    {
+	      DEBUG syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : info->host_or_ip is an ip, fix !", __func__);
 	      /* info->host_or_ip was info->ip instead of info->host */
 	      addr_scramble += sizeof(void *);
 	    }
