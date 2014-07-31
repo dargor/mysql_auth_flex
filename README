@@ -8,6 +8,11 @@ enable-cleartext-plugin
 enable-cleartext-plugin
 EOF
 
+cat >> /etc/mysql/conf.d/local.cnf <<EOF
+[mysqld]
+plugin-load=auth_flex=auth_flex.so;auth_flex_cleartext=auth_flex.so;auth_flex_mixed=auth_flex.so
+EOF
+
 cat >> /etc/apparmor.d/local/usr.sbin.mysqld <<EOF
 # allow auth_flex to use PAM
 #include <abstractions/authentication>
