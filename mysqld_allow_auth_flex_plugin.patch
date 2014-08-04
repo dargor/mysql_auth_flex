@@ -1,0 +1,10 @@
+--- ./mysql-5.5-5.5.38/sql/sql_acl.cc~	2014-05-11 18:39:35.000000000 +0200
++++ ./mysql-5.5-5.5.38/sql/sql_acl.cc	2014-08-01 17:37:19.516923853 +0200
+@@ -8349,6 +8349,7 @@
+   /* user account requires non-default plugin and the client is too old */
+   if (mpvio->acl_user->plugin.str != native_password_plugin_name.str &&
+       mpvio->acl_user->plugin.str != old_password_plugin_name.str &&
++      !(strncmp(mpvio->acl_user->plugin.str, "flex_", 5)) &&
+       !(mpvio->client_capabilities & CLIENT_PLUGIN_AUTH))
+   {
+     DBUG_ASSERT(my_strcasecmp(system_charset_info, mpvio->acl_user->plugin.str,
