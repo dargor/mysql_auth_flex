@@ -31,6 +31,12 @@ int flex_debug_level = FLEX_DEBUG_LEVEL;
  * - validate the "mysql_clear_password" against PAM
  */
 
+struct auth_flex_data {
+  void *addr_scramble;
+  void *addr_salt;
+  void *addr_client_capabilities;
+};
+
 static int auth_flex_cleartext_plugin(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info);
 
 static unsigned char *_dump_bin_to_hex(unsigned char *s, unsigned int len)
@@ -68,7 +74,7 @@ static void _show_password(unsigned char *pkt, unsigned int pkt_len)
  *
  * we could hardcode the offset somewhere. ideally, we should have an API to query if from `sql_acl.cc'
  */
-static void *_find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info)
+static void _find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, struct auth_flex_data *d_flex_data)
 {
   void *addr_scramble = NULL;
   int i;
@@ -102,7 +108,7 @@ static void *_find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *
 	}
     }
 
-  return addr_scramble;
+  d_flex_data->addr_scramble = addr_scramble;
 }
 
 /* find the address of (MPVIO_EXT *)->acl_user->salt (the hashed password for the user stored in the `mysql.user' table)
@@ -110,12 +116,25 @@ static void *_find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *
  * INCOMPLETED: instead, we rely and return `info->auth_string' (the `auth_string' stored in the `mysql.user' table)
  * we lack an API to ask `sql_acl.cc' for the user password. or simply an API to validate the password.
  */
-static void *_find_salt(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info)
+static void _find_addr_salt(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, struct auth_flex_data *d_flex_data)
 {
   void *addr_acl_user = ((void *)&vio[1]) + sizeof(*info);
   /* void *addr_salt = addr_acl_user + 24 + ?? */
 
-  return &info->auth_string;
+  d_flex_data->addr_salt = &info->auth_string;
+}
+
+/* find the address of (MPVIO_EXT *)->client_capabilities
+ *
+ * we use it to known if the client support CLIENT_PLUGIN_AUTH (change user plugin to "mysql_clear_password" request)
+ */
+static void _find_addr_client_capabilities(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, struct auth_flex_data *d_flex_data)
+{
+  void *addr_client_capabilities = d_flex_data->addr_scramble - sizeof(void *);
+
+  DEBUG syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : client_capabilities %ld (CLIENT_PLUGIN_AUTH : %d)", __func__,
+	       *(ulong *)addr_client_capabilities, *(ulong *)addr_client_capabilities & CLIENT_PLUGIN_AUTH ? 1 : 0);
+  d_flex_data->addr_client_capabilities = addr_client_capabilities;
 }
 
 /* validate authentication like "mysql_native_password" would do it.
@@ -126,17 +145,17 @@ static void *_find_salt(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info)
  * - http://www.mysqlfanboy.com/2012/06/mysql-security/
  */
 static int flex_validate_authentication_native(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, unsigned char *pw_to_check,
-					       void *addr_scramble)
+					       struct auth_flex_data *d_auth_flex_data)
 {
-  void *addr_salt = _find_salt(vio, info);
+  _find_addr_salt(vio, info, d_auth_flex_data);
 
-  char *binary_salt = malloc(strlen(*(void **)addr_salt) + 1);
+  char *binary_salt = malloc(strlen(*(void **)d_auth_flex_data->addr_salt) + 1);
   if (!binary_salt)
     return 0;
 
-  get_salt_from_password(binary_salt, *(void **)addr_salt);
+  get_salt_from_password(binary_salt, *(void **)d_auth_flex_data->addr_salt);
 
-  int ret = check_scramble(pw_to_check, *(void **)addr_scramble, binary_salt); /* return 0 if okay. BEWARE */
+  int ret = check_scramble(pw_to_check, *(void **)d_auth_flex_data->addr_scramble, binary_salt); /* return 0 if okay. BEWARE */
 
   free(binary_salt);
 
@@ -162,7 +181,7 @@ static int flex_validate_authentication_cleartext(MYSQL_PLUGIN_VIO *vio, MYSQL_S
  * - http://bugs.mysql.com/bug.php?id=57442
  * - wireshark...
  */
-static void flex_change_plugin_to_cleartext(void *addr_scramble)
+static void flex_change_plugin_to_cleartext(struct auth_flex_data *d_auth_flex_data)
 {
     char *pkt_change_plugin = "mysql_clear_password";
 
@@ -170,20 +189,23 @@ static void flex_change_plugin_to_cleartext(void *addr_scramble)
      *  and send the current auth pluging + the requested one (\254 + "mysql_native_password\0" + "mysql_clear_password\0")
      * so, below we send the "plugin change" request ourselves on the wire. (\254 + "mysql_clear_password\0")
      */
-    void *addr_net = addr_scramble + sizeof(void *) * 4 + sizeof(ulong);
+    void *addr_net = d_auth_flex_data->addr_scramble + sizeof(void *) * 4 + sizeof(ulong);
     DEBUG syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : addr_scramble/%p addr_net/%p (diff %ld)", __func__,
-		 addr_scramble, addr_net, addr_net - addr_scramble);
+		 d_auth_flex_data->addr_scramble, addr_net, addr_net - d_auth_flex_data->addr_scramble);
 
     net_write_command(*(void **)addr_net, 254, pkt_change_plugin, strlen(pkt_change_plugin) + 1, "", 0);
 }
 
 static int auth_flex_plugin(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info)
 {
+  struct auth_flex_data d_auth_flex_data;
   unsigned char *pkt;
   int pkt_len;
 
   DEBUG syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : user `%.*s' from %s (auth_string: %.*s) vio/%p info/%p", __func__,
 	       info->user_name_length, info->user_name, info->host_or_ip, (int)info->auth_string_length, info->auth_string, vio, info);
+
+  memset(&d_auth_flex_data, '\0', sizeof(d_auth_flex_data));
 
   if ((pkt_len = vio->read_packet(vio, &pkt)) < 0)
     return CR_ERROR;
@@ -198,16 +220,20 @@ static int auth_flex_plugin(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info)
 
   DEBUG _show_password(pkt, pkt_len);
 
-  void *addr_scramble = _find_addr_scramble(vio, info);
+  _find_addr_scramble(vio, info, &d_auth_flex_data);
 
-  int authed = flex_validate_authentication_native(vio, info, pkt, addr_scramble);
+  int authed = flex_validate_authentication_native(vio, info, pkt, &d_auth_flex_data);
   INFO syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : user `%.*s' from %s native password validation : %d", __func__,
 	      info->user_name_length, info->user_name, info->host_or_ip, authed);
 
   if (authed)
     return CR_OK;
 
-  flex_change_plugin_to_cleartext(addr_scramble);
+  _find_addr_client_capabilities(vio, info, &d_auth_flex_data);
+  if (!(*(ulong *)d_auth_flex_data.addr_client_capabilities & CLIENT_PLUGIN_AUTH))
+    return CR_ERROR;
+
+  flex_change_plugin_to_cleartext(&d_auth_flex_data);
 
   return auth_flex_cleartext_plugin(vio, info);
 }
