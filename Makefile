@@ -25,7 +25,7 @@ $(NAME)	: $(OBJ)
 	cc -o $(NAME) -shared $(OBJ) $(LIBS)
 
 install	: $(NAME)
-	sudo cp -p $(NAME) /usr/lib/mysql/plugin/$(NAME)
+	sudo install $(NAME) /usr/lib/mysql/plugin/$(NAME)
 
 clean	:
 	-$(RM) $(OBJ) *~
