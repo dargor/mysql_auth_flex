@@ -70,7 +70,7 @@ int pam_flex_check(const char *username, const char *password)
   /*  PAM_DISALLOW_NULL_AUTHTOK : The PAM module service should return PAM_AUTH_ERR if the user does not have a registered authentication token. */
   ret_pam = pam_authenticate(pamh, PAM_SILENT);
 
-  syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : pam_authenticate() error : %s", __func__, pam_strerror(pamh, ret_pam));
+  INFO syslog(LOG_LOCAL7 | LOG_NOTICE, "%s : pam_authenticate() error : %s", __func__, pam_strerror(pamh, ret_pam));
 
   if (ret_pam == PAM_SUCCESS)
     authed = 1;
