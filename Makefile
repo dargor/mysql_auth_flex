@@ -1,22 +1,34 @@
 NAME	= auth_flex.so
 RM	= rm -f
 
-CFLAGS	= -fPIC -DMYSQL_DYNAMIC_PLUGIN
+dbms	= mysql
+
+CFLAGS	= -fPIC -DMYSQL_DYNAMIC_PLUGIN -g -ggdb
 LIBS	=
 LDFLAGS	= -lpam
 
-MYSQL_CFLAGS	!= mysql_config --cflags --include
-MYSQL_LIBS	=
+SRC	= auth_flex.c pam_flex.c auth_flex_util.c
+
+.if $(dbms) == mysql
+DBMS_CFLAGS	!= mysql_config --cflags --include | sed 's/-O2//'
+DBMS_LIBS	=
+SRC		+= auth_flex_dbms_mysql.c
+.endif
+
+.if $(dbms) == mariadb
+DBMS_CFLAGS	!= mariadb_config --cflags --include | sed 's/-O2//'
+DBMS_LIBS	=
+SRC		+= auth_flex_dbms_mariadb.c
+.endif
 
 PAM_CFLAGS	=
 PAM_LIBS	= -lpam
 
 debug	=	0
 
-CFLAGS	+= $(MYSQL_CFLAGS) $(PAM_CFLAGS) -DFLEX_DEBUG_LEVEL=$(debug)
-LIBS	+= $(MYSQL_LIBS) $(PAM_LIBS)
+CFLAGS	+= $(DBMS_CFLAGS) $(PAM_CFLAGS) -DFLEX_DEBUG_LEVEL=$(debug) -DDBMS_$(dbms)
+LIBS	+= $(DBMS_LIBS) $(PAM_LIBS)
 
-SRC	= auth_flex.c pam_flex.c
 OBJ	= $(SRC:.c=.o)
 
 all	: $(NAME)
@@ -25,7 +37,7 @@ $(NAME)	: $(OBJ)
 	cc -o $(NAME) -shared $(OBJ) $(LIBS)
 
 install	: $(NAME)
-	sudo install $(NAME) /usr/lib/mysql/plugin/$(NAME)
+	install $(NAME) /usr/lib/mysql/plugin/$(NAME)
 
 clean	:
 	-$(RM) $(OBJ) *~
