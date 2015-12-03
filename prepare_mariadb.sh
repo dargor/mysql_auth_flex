@@ -13,3 +13,6 @@ perl -pi -e 's|^(?=#include )|//|' /usr/include/mariadb/mysql/plugin.h
 # https://github.com/MariaDB/server/blob/10.0/include/mysql/plugin_auth.h.pp
 #  This is a very nasty bug which prevents from compiling correct auth plugins for MariaDB
 perl -pi -e 's/^#define MYSQL_USERNAME_LENGTH\s+\K48/512/' /usr/include/mariadb/mysql/plugin_auth_common.h
+
+perl -pi -e 's|^(?=#include <decimal.h>)|//|' /usr/include/mariadb/ma_dyncol.h
+perl -pi -e 's|^(?=#include <my_decimal_limits.h>)|//|' /usr/include/mariadb/ma_dyncol.h
