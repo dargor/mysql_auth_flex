@@ -136,7 +136,7 @@ static int auth_flex_plugin(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info)
   if ((pkt_len = vio->read_packet(vio, &pkt)) < 0)
     return CR_ERROR;
 
-  if (!pkt_len || *pkt == '\0')
+  if (!pkt_len)
     {
       info->password_used = PASSWORD_USED_NO;
       return CR_ERROR;
