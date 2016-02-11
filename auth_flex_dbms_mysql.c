@@ -85,12 +85,16 @@ void _find_addr_client_capabilities(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INF
 void flex_change_plugin_to_cleartext(MYSQL_PLUGIN_VIO *vio, struct auth_flex_data *d_auth_flex_data)
 {
   char * __attribute__ ((unused)) pkt_change_plugin = "mysql_clear_password";
+  void **addr_net_ptr = NULL;
 
   /* we cannot call vio->write_packet() because send_plugin_request_packet() would concatenate 
    *  and send the current auth pluging + the requested one (\254 + "mysql_native_password\0" + "mysql_clear_password\0")
    * so, below we send the "plugin change" request ourselves on the wire. (\254 + "mysql_clear_password\0")
    */
-  void **addr_net_ptr = d_auth_flex_data->addr_scramble_ptr + sizeof(void *) * 4 + sizeof(ulong);
+  {
+    /* be careful..., arithmetic on a (void **) would move 4x faster than on a (void *)... */
+    addr_net_ptr = (void *)(((void *)d_auth_flex_data->addr_scramble_ptr) + sizeof(void *) * 4 + sizeof(ulong));
+  }
   DEBUG xsyslog(LOG_LOCAL7 | LOG_NOTICE, "%s : addr_scramble/%p addr_net/%p (diff %ld)", __func__,
 		d_auth_flex_data->addr_scramble_ptr, addr_net_ptr, (long int)(addr_net_ptr - d_auth_flex_data->addr_scramble_ptr));
 
