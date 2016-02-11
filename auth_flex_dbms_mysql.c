@@ -37,16 +37,22 @@ void _find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, st
 	  DEBUG xsyslog(LOG_LOCAL7 | LOG_NOTICE, "%s : found info->host_or_ip (%s) at %p!", __func__, info->host_or_ip, addr);
 
 	  /* assume info->host_or_ip == (MPVIO_EXT *)->host */
-	  addr_scramble = addr - 4 * 16;
+	  {
+	    /* be careful..., arithmetic on a (void **) would move 4x faster than on a (void *)... */
+	    addr_scramble = (void **)(((void *)addr) - 4 * 16);
+	  }
 
 	  if (strspn(info->host_or_ip, "0123456789.") == strlen(info->host_or_ip))
 	    {
 	      DEBUG xsyslog(LOG_LOCAL7 | LOG_NOTICE, "%s : info->host_or_ip is an ip, fix !", __func__);
 	      /* info->host_or_ip was info->ip instead of info->host */
-	      addr_scramble += sizeof(void *);
+	      {
+		/* (void **) arithmetic... move 4 bytes indeed... */
+		addr_scramble += 1;
+	      }
 	    }
 
-	  DEBUG xsyslog(LOG_LOCAL7 | LOG_NOTICE, "%s : scramble should be at %p (diff %ld)", __func__, *(char **)addr_scramble, (long int)(addr_scramble - (void *)vio));
+	  DEBUG xsyslog(LOG_LOCAL7 | LOG_NOTICE, "%s : scramble should be at %p (diff %ld)", __func__, *(char **)addr_scramble, (long int)((void *)addr_scramble - (void *)vio));
 	  DEBUG xsyslog(LOG_LOCAL7 | LOG_NOTICE, "%s : scramble [%ld] `%s'", __func__, (long int)strlen(*(char **)addr_scramble), *(char **)addr_scramble);
 	  break;
 	}
@@ -76,7 +82,7 @@ void _find_addr_client_capabilities(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INF
  * - http://bugs.mysql.com/bug.php?id=57442
  * - wireshark...
  */
-static void flex_change_plugin_to_cleartext(MYSQL_PLUGIN_VIO *vio, struct auth_flex_data *d_auth_flex_data)
+void flex_change_plugin_to_cleartext(MYSQL_PLUGIN_VIO *vio, struct auth_flex_data *d_auth_flex_data)
 {
   char * __attribute__ ((unused)) pkt_change_plugin = "mysql_clear_password";
 

@@ -236,7 +236,12 @@ mysql_declare_plugin(flex_plugin)
     NULL, /* status variables */
     NULL, /* system variables */
     "1.0 experimental", /* string version representation, eg. "0.1 example" */
+#ifdef DBMS_mysql
+    0,
+#endif
+#ifdef DBMS_mariadb /* I am not even sure that it really matters to have this flag */
     MariaDB_PLUGIN_MATURITY_EXPERIMENTAL, /*  MariaDB_PLUGIN_MATURITY_EXPERIMENTAL */
+#endif
 }
 #ifdef DBMS_mysql
 ,
