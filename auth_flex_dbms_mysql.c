@@ -68,7 +68,8 @@ void _find_addr_scramble(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, st
  */
 void _find_addr_client_capabilities(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, struct auth_flex_data *d_flex_data)
 {
-  void **addr_client_capabilities_ptr = d_flex_data->addr_scramble_ptr - sizeof(void *);
+  /* be careful..., arithmetic on a (void **) would move 4x faster than on a (void *)... */
+  void **addr_client_capabilities_ptr = ((void *)d_flex_data->addr_scramble_ptr) - sizeof(void *);
 
   DEBUG xsyslog(LOG_LOCAL7 | LOG_NOTICE, "%s : client_capabilities %ld (CLIENT_PLUGIN_AUTH : %d)", __func__,
 		*(ulong *)addr_client_capabilities_ptr, *(ulong *)addr_client_capabilities_ptr & CLIENT_PLUGIN_AUTH ? 1 : 0);
