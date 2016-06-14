@@ -181,6 +181,22 @@ static int auth_flex_cleartext_plugin(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_I
 
   info->password_used = PASSWORD_USED_YES;
 
+  /* XXX to the brave souls who may be wandering in this code hopelessly,
+   *     there is one thing you should know : the mysql client truncates
+   *     passwords at 80 characters when reading them from stdin, so if
+   *     you try to log in with a key longer than that, you may find
+   *     yourself scratching your head, wondering where in your life
+   *     everything went wrong and what you should have done better.
+   *
+   *     see get_tty_password_ext() in get_password.c from mysql sources,
+   *     and enjoy the sweet bitterness of its code.
+   *
+   *     but fear not, mysql [...] --password='teh_key' works as expected.
+   *
+   *     may this friendly piece of advice save some hours of your life.
+   *
+   */
+
   DEBUG _show_password(pkt, pkt_len);
 
   int authed = flex_validate_authentication_cleartext(vio, info, pkt);
