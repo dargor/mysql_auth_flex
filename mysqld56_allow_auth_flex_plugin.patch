@@ -1,0 +1,12 @@
+diff --git a/sql/sql_acl.cc b/sql/sql_acl.cc
+index 27c3a02..3e42c6c 100644
+--- a/sql/sql_acl.cc
++++ b/sql/sql_acl.cc
+@@ -9853,6 +9853,7 @@ static bool find_mpvio_user(MPVIO_EXT *mpvio)
+                     native_password_plugin_name.str) != 0 &&
+       my_strcasecmp(system_charset_info, mpvio->acl_user->plugin.str,
+                     old_password_plugin_name.str) != 0 &&
++      !(strncmp(mpvio->acl_user->plugin.str, "flex_", 5)) &&
+       !(mpvio->client_capabilities & CLIENT_PLUGIN_AUTH))
+   {
+     /* user account requires non-default plugin and the client is too old */
