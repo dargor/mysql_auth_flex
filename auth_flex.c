@@ -11,6 +11,7 @@
 #include "config.h"
 #include "auth_flex.h"
 #include "auth_flex_util.h"
+#include "auth_flex_dbms_generic.h"
 #include "pam_flex.h"
 
 int flex_debug_level = FLEX_DEBUG_LEVEL;
