@@ -257,12 +257,12 @@ static struct st_mysql_auth auth_flex_cleartext_handler=
   .interface_version              = MYSQL_AUTHENTICATION_INTERFACE_VERSION,        // 5.5 - 5.6 - 5.7
   .client_auth_plugin             = "mysql_clear_password",                        // 5.5 - 5.6 - 5.7
   .authenticate_user              = auth_flex_cleartext_plugin,                    // 5.5 - 5.6 - 5.7
-#if DBMS_mysql >= 57
+#if defined(DBMS_mysql) && DBMS_mysql >= 57
   .generate_authentication_string = generate_auth_string_hash,                     //             5.7
   .validate_authentication_string = validate_auth_string_hash,                     //             5.7
   .set_salt                       = set_salt,                                      //             5.7
   .authentication_flags           = AUTH_FLAG_PRIVILEGED_USER_FOR_PASSWORD_CHANGE, //             5.7
-#endif /* DBMS_mysql >= 57 */
+#endif /* defined(DBMS_mysql) && DBMS_mysql >= 57 */
 };
 
 static struct st_mysql_auth auth_flex_mixed_handler=
@@ -270,12 +270,12 @@ static struct st_mysql_auth auth_flex_mixed_handler=
   .interface_version              = MYSQL_AUTHENTICATION_INTERFACE_VERSION,        // 5.5 - 5.6 - 5.7
   .client_auth_plugin             = "mysql_clear_password",                        // 5.5 - 5.6 - 5.7
   .authenticate_user              = auth_flex_plugin,                              // 5.5 - 5.6 - 5.7
-#if DBMS_mysql >= 57
+#if defined(DBMS_mysql) && DBMS_mysql >= 57
   .generate_authentication_string = generate_auth_string_hash,                     //             5.7
   .validate_authentication_string = validate_auth_string_hash,                     //             5.7
   .set_salt                       = set_salt,                                      //             5.7
   .authentication_flags           = AUTH_FLAG_PRIVILEGED_USER_FOR_PASSWORD_CHANGE, //             5.7
-#endif /* DBMS_mysql >= 57 */
+#endif /* defined(DBMS_mysql) && DBMS_mysql >= 57 */
 };
 #endif /* defined(DBMS_mysql) */
 
