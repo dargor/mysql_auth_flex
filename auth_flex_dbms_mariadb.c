@@ -14,6 +14,7 @@
 #include "config.h"
 #include "auth_flex.h"
 #include "auth_flex_util.h"
+#include "auth_flex_dbms_generic.h"
 
 static int write_packet_fake(struct st_plugin_vio *vio, const unsigned char *packet, int packet_len)
 {

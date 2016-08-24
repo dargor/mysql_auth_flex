@@ -10,6 +10,7 @@
 #include "config.h"
 #include "auth_flex.h"
 #include "auth_flex_util.h"
+#include "auth_flex_dbms_generic.h"
 
 /* find the address of (MPVIO_EXT *)->scramble (the random string sent to the client for "mysql_native_password" authentication)
  *
