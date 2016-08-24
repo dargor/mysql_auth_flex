@@ -160,7 +160,7 @@ static int auth_flex_plugin(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info)
 
 #ifdef DBMS_mysql
   _find_addr_client_capabilities(vio, info, &d_auth_flex_data);
-  if (!(*(ulong *)d_auth_flex_data.addr_client_capabilities_ptr & CLIENT_PLUGIN_AUTH))
+  if (!(d_auth_flex_data.client_capabilities & CLIENT_PLUGIN_AUTH))
     return CR_ERROR;
 #endif /* DBMS_mysql */
 
@@ -210,28 +210,74 @@ static int auth_flex_cleartext_plugin(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_I
   return CR_ERROR;
 }
 
+#if defined(DBMS_mysql) && DBMS_mysql >= 57
+
+int generate_auth_string_hash(char *outbuf MY_ATTRIBUTE((unused)),
+                              unsigned int *buflen,
+                              const char *inbuf MY_ATTRIBUTE((unused)),
+                              unsigned int inbuflen MY_ATTRIBUTE((unused)))
+{
+  *buflen= 0;
+  return 0;
+}
+
+int validate_auth_string_hash(char* const inbuf  MY_ATTRIBUTE((unused)),
+                              unsigned int buflen  MY_ATTRIBUTE((unused)))
+{
+  return 0;
+}
+
+int set_salt(const char* password MY_ATTRIBUTE((unused)),
+             unsigned int password_len MY_ATTRIBUTE((unused)),
+             unsigned char* salt MY_ATTRIBUTE((unused)),
+             unsigned char* salt_len)
+{
+  *salt_len= 0;
+  return 0;
+}
+
+#endif /* defined(DBMS_mysql) && DBMS_mysql >= 57 */
+
 static struct st_mysql_auth auth_flex_handler=
 {
-  MYSQL_AUTHENTICATION_INTERFACE_VERSION,
-  "mysql_native_password",
-  auth_flex_plugin
+  .interface_version              = MYSQL_AUTHENTICATION_INTERFACE_VERSION,        // 5.5 - 5.6 - 5.7
+  .client_auth_plugin             = "mysql_native_password",                       // 5.5 - 5.6 - 5.7
+  .authenticate_user              = auth_flex_plugin,                              // 5.5 - 5.6 - 5.7
+#if defined(DBMS_mysql) && DBMS_mysql >= 57
+  .generate_authentication_string = generate_auth_string_hash,                     //             5.7
+  .validate_authentication_string = validate_auth_string_hash,                     //             5.7
+  .set_salt                       = set_salt,                                      //             5.7
+  .authentication_flags           = AUTH_FLAG_PRIVILEGED_USER_FOR_PASSWORD_CHANGE, //             5.7
+#endif /* defined(DBMS_mysql) && DBMS_mysql >= 57 */
 };
 
-#ifdef DBMS_mysql
+#if defined(DBMS_mysql)
 static struct st_mysql_auth auth_flex_cleartext_handler=
 {
-  MYSQL_AUTHENTICATION_INTERFACE_VERSION,
-  "mysql_clear_password", /* requires the clear text plugin */
-  auth_flex_cleartext_plugin
+  .interface_version              = MYSQL_AUTHENTICATION_INTERFACE_VERSION,        // 5.5 - 5.6 - 5.7
+  .client_auth_plugin             = "mysql_clear_password",                        // 5.5 - 5.6 - 5.7
+  .authenticate_user              = auth_flex_cleartext_plugin,                    // 5.5 - 5.6 - 5.7
+#if defined(DBMS_mysql) && DBMS_mysql >= 57
+  .generate_authentication_string = generate_auth_string_hash,                     //             5.7
+  .validate_authentication_string = validate_auth_string_hash,                     //             5.7
+  .set_salt                       = set_salt,                                      //             5.7
+  .authentication_flags           = AUTH_FLAG_PRIVILEGED_USER_FOR_PASSWORD_CHANGE, //             5.7
+#endif /* defined(DBMS_mysql) && DBMS_mysql >= 57 */
 };
 
 static struct st_mysql_auth auth_flex_mixed_handler=
 {
-  MYSQL_AUTHENTICATION_INTERFACE_VERSION,
-  "mysql_clear_password", /* requires the clear text plugin */
-  auth_flex_plugin
+  .interface_version              = MYSQL_AUTHENTICATION_INTERFACE_VERSION,        // 5.5 - 5.6 - 5.7
+  .client_auth_plugin             = "mysql_clear_password",                        // 5.5 - 5.6 - 5.7
+  .authenticate_user              = auth_flex_plugin,                              // 5.5 - 5.6 - 5.7
+#if defined(DBMS_mysql) && DBMS_mysql >= 57
+  .generate_authentication_string = generate_auth_string_hash,                     //             5.7
+  .validate_authentication_string = validate_auth_string_hash,                     //             5.7
+  .set_salt                       = set_salt,                                      //             5.7
+  .authentication_flags           = AUTH_FLAG_PRIVILEGED_USER_FOR_PASSWORD_CHANGE, //             5.7
+#endif /* defined(DBMS_mysql) && DBMS_mysql >= 57 */
 };
-#endif
+#endif /* defined(DBMS_mysql) */
 
 static int init(void *p __attribute__((unused)))
 {

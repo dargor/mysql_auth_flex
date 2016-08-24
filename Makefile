@@ -1,7 +1,10 @@
 NAME	= auth_flex.so
 RM	= rm -f
 
-dbms	= mysql
+dbms		= mysql
+dbms_version	?= 55
+#                  55 works for mysql 5.5 and 5.6, so it's the default
+#                  57 is needed for mysql 5.7
 
 CFLAGS	= -fPIC -DMYSQL_DYNAMIC_PLUGIN -g -ggdb
 LIBS	=
@@ -26,7 +29,7 @@ PAM_LIBS	= -lpam
 
 debug	=	0
 
-CFLAGS	+= $(DBMS_CFLAGS) $(PAM_CFLAGS) -DFLEX_DEBUG_LEVEL=$(debug) -DDBMS_$(dbms)
+CFLAGS	+= $(DBMS_CFLAGS) $(PAM_CFLAGS) -DFLEX_DEBUG_LEVEL=$(debug) -DDBMS_$(dbms)=$(dbms_version)
 LIBS	+= $(DBMS_LIBS) $(PAM_LIBS)
 
 OBJ	= $(SRC:.c=.o)
